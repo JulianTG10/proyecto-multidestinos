@@ -1,23 +1,22 @@
 const routes = [
   {
-    path: "/",
+    path: "/cotizacion",
     component: () => import("layouts/MainLayout.vue"),
     children: [
-      { path: "", component: () => import("pages/IndexPage.vue") },
       {
         path: "/cotizacion",
         component: () => import("pages/cotizacion/CotizacionViajes.vue"),
+      },
+      {
+        path: "/ControlUser",
+        component: () => import("pages/ControlUser.vue"),
       },
     ],
   },
   {
     name: "login",
-    path: "/login",
-    component: () => import("pages/loginUser.vue"),
-  },
-  {
     path: "/",
-    redirect: "/login", // Redirige la raíz al inicio de sesión
+    component: () => import("pages/IndexPage.vue"),
   },
 
   // Always leave this as last one,

@@ -31,7 +31,12 @@
             </q-item-section>
             <q-item-section>Cotización</q-item-section>
           </q-item>
-
+          <q-item clickable @click="goPage('/ControlUser')">
+            <q-item-section avatar>
+              <q-icon name="manage_accounts" />
+            </q-item-section>
+            <q-item-section>Control Usuarios</q-item-section>
+          </q-item>
           <!-- <q-item clickable @click="goPage('/cotizacion')">
             <q-item-section avatar>
               <q-icon name="logout" />
@@ -41,7 +46,7 @@
 
           <q-separator />
 
-          <q-item clickable @click="goPage('/cotizacion')">
+          <q-item clickable @click="logout">
             <q-item-section avatar>
               <q-icon name="logout" />
             </q-item-section>
