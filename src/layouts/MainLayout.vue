@@ -4,11 +4,11 @@
       <q-toolbar>
         <q-btn flat @click="drawer = !drawer" round dense icon="menu"></q-btn>
 
-        <img width="10%" src="/src/img/imgBlanco.png" />
+        <span>MultiCotizaciones</span>
 
         <q-toolbar-title></q-toolbar-title>
 
-        <div>Quasar v{{ $q.version }}</div>
+        <div>Versión 0.1</div>
       </q-toolbar>
     </q-header>
 
@@ -31,11 +31,22 @@
             </q-item-section>
             <q-item-section>Cotización</q-item-section>
           </q-item>
-          <q-item clickable @click="goPage('/ControlUser')">
+
+          <q-item
+            v-if="userRole === 'administrador'"
+            clickable
+            @click="goPage('/ControlUser')"
+          >
             <q-item-section avatar>
               <q-icon name="manage_accounts" />
             </q-item-section>
             <q-item-section>Control Usuarios</q-item-section>
+          </q-item>
+          <q-item clickable @click="goPage('/ControlClient')">
+            <q-item-section avatar>
+              <q-icon name="group" />
+            </q-item-section>
+            <q-item-section>Control Clientes</q-item-section>
           </q-item>
           <!-- <q-item clickable @click="goPage('/cotizacion')">
             <q-item-section avatar>

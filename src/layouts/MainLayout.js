@@ -13,6 +13,8 @@ export default {
     const miniState = ref(true);
     const drawer = ref(false);
     const linksList = [];
+    const userData = LocalStorage.getItem("userData");
+    const userRole = userData ? userData.rol : null;
 
     const toggleLeftDrawer = () => {
       leftDrawerOpen.value = !leftDrawerOpen.value;
@@ -43,6 +45,7 @@ export default {
     };
 
     return {
+      userRole,
       router,
       essentialLinks: linksList,
       leftDrawerOpen,

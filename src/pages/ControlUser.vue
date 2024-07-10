@@ -30,9 +30,25 @@
             <q-select
               label="Rol"
               v-model="rol"
-              :options="['administrador', 'usuario']"
+              :options="[
+                'administrador',
+                'Comercial 1',
+                'Comercial 2',
+                'Contable',
+                'Supervisor',
+                'Asesor',
+              ]"
               :rules="[(val) => !!val || 'El rol es obligatorio']"
+              @input="checkZonaField"
             />
+            <q-select
+              v-if="rol === 'Asesor'"
+              label="Zona"
+              v-model="zona"
+              :options="['Zona 1', 'Zona 2']"
+              :rules="[(val) => !!val || 'La zona es obligatoria']"
+            />
+
             <div class="row justify-end q-mt-md">
               <q-btn
                 type="submit"
@@ -63,8 +79,23 @@
             <q-select
               label="Rol"
               v-model="rolEditar"
-              :options="['administrador', 'usuario']"
+              :options="[
+                'administrador',
+                'Comercial 1',
+                'Comercial 2',
+                'Contable',
+                'Supervisor',
+                'Asesor',
+              ]"
               :rules="[(val) => !!val || 'El rol es obligatorio']"
+              @input="checkZonaFieldEditar"
+            />
+            <q-select
+              v-if="rolEditar === 'Asesor'"
+              label="Zona"
+              v-model="zonaEditar"
+              :options="['Zona 1', 'Zona 2']"
+              :rules="[(val) => !!val || 'La zona es obligatoria']"
             />
             <q-input
               label="Contraseña"
@@ -93,10 +124,18 @@
     >
       <template v-slot:body-cell-acciones="props">
         <q-td :props="props">
-          <q-btn dense color="primary" @click="editarUsuario(props.row)"
+          <q-btn
+            dense
+            color="primary"
+            @click="editarUsuario(props.row)"
+            class="q-mx-xs"
             >Editar</q-btn
           >
-          <q-btn dense color="negative" @click="eliminarUsuario(props.row.id)"
+          <q-btn
+            dense
+            color="negative"
+            @click="eliminarUsuario(props.row.id)"
+            class="q-mx-xs"
             >Eliminar</q-btn
           >
         </q-td>
@@ -107,10 +146,12 @@
 
 <script>
 import { Notify } from "quasar";
-
+import { LocalStorage } from "quasar";
 export default {
   data() {
     return {
+      zona: "",
+      zonaEditar: "",
       nombreCompleto: "",
       usuario: "",
       contraseña: "",
@@ -168,8 +209,18 @@ export default {
     this.cargarUsuarios();
   },
   methods: {
+    checkZonaFieldEditar() {
+      if (this.rolEditar !== "Asesor") {
+        this.zonaEditar = "";
+      }
+    },
+    checkZonaField() {
+      if (this.rol !== "Asesor") {
+        this.zona = "";
+      }
+    },
     cargarUsuarios() {
-      fetch("http://localhost:8010/user/")
+      fetch("https://backendmultidestinosexpress.onrender.com/user/")
         .then((response) => response.json())
         .then((data) => {
           this.usuarios = data;
@@ -187,10 +238,11 @@ export default {
         contrasena: this.contraseña,
         activo: estadoActivo,
         rol: this.rol,
+        zona: this.zona ? this.zona : "",
       };
       console.log(newUser);
 
-      fetch("http://localhost:8010/user/", {
+      fetch("https://backendmultidestinosexpress.onrender.com/user/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -232,6 +284,8 @@ export default {
       this.usuarioEditar = usuario.usuario;
       this.rolEditar = usuario.rol;
       this.usuarioEditandoId = usuario.id;
+      this.zonaEditar = usuario.zona ? usuario.zona : "";
+
       this.mostrarModalEditar = true;
     },
     editarUsuarioSubmit() {
@@ -242,18 +296,22 @@ export default {
         usuario: this.usuarioEditar,
         contrasena: this.contraseñaEditar,
         rol: this.rolEditar,
+        zona: this.zonaEditar ? this.zonaEditar : "",
         activo: "1",
       };
 
       console.log("Usuario editado:", usuarioEditado);
 
-      fetch(`http://localhost:8010/user/${usuarioEditado.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(usuarioEditado),
-      })
+      fetch(
+        `https://backendmultidestinosexpress.onrender.com/user/${usuarioEditado.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(usuarioEditado),
+        }
+      )
         .then((response) => {
           if (response.ok) {
             // Actualizar la lista local de usuarios o recargarlos desde el servidor
@@ -285,7 +343,7 @@ export default {
     },
     eliminarUsuario(id) {
       // Eliminar el usuario del servidor y actualizar la lista local
-      fetch(`http://localhost:8010/user/${id}`, {
+      fetch(`https://backendmultidestinosexpress.onrender.com/user/${id}`, {
         method: "DELETE",
       })
         .then((response) => {
