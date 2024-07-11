@@ -1187,7 +1187,9 @@ export default {
     async enviarCotizacion(cotizacion) {
       try {
         // 1. Generar el PDF
-        const pdfBlob = await this.descargarCotizacion(cotizacion.idCotizacion);
+        const pdfBlob = await (cotizacion.idCotizacion.includes("-C")
+          ? this.descargarCotizacionCano(cotizacion.idCotizacion)
+          : this.descargarCotizacion(cotizacion.idCotizacion));
 
         // 2. Crear un enlace temporal para descargar el PDF
         const link = document.createElement("a");
@@ -1841,16 +1843,22 @@ export default {
         const nombres = [
           // Impuestos adicionales aquí
 
-          "TRANSPORTE NO COMISI",
+          "TRANSPORTE NO COMI",
           "Q",
           "YS",
           "CO",
           "TA",
           "YS TA",
-          "Cormacarena",
-          "PQS Naturales",
-          "Alcaldía",
-          "Defensa Civil",
+
+          "defensaCivil",
+          "alcaldiaNacional",
+          "alcaldiaExtranjero",
+          "pqsNaturalesExtranjero",
+          "pqsNaturales25a65",
+          "pqsNaturales5a24",
+          "cormacarenaExtranjero",
+          "cormacarena5a11",
+          "cormacarena12a65",
           "TOTAL IMPUESTOS",
         ];
 
@@ -1866,14 +1874,24 @@ export default {
           0,
           0,
           0,
+          0,
+          0,
+          0,
+          0,
+          0,
           cotizacion.precioTrans,
         ];
         // Definir impuestosAdicionales FUERA del else if
         const impuestosAdicionales = [
-          "cormacarena",
-          "pqsNaturales",
-          "alcaldia",
           "defensaCivil",
+          "alcaldiaNacional",
+          "alcaldiaExtranjero",
+          "pqsNaturalesExtranjero",
+          "pqsNaturales25a65",
+          "pqsNaturales5a24",
+          "cormacarenaExtranjero",
+          "cormacarena5a11",
+          "cormacarena12a65",
         ];
 
         // Calcular valores de impuestos adicionales y actualizar totalImpuestos
@@ -2131,13 +2149,26 @@ export default {
         // Mover a la siguiente sección del documento si es necesario
         // Agregar recuadro con el título "Depósito y Condiciones de Pago"
         const recuadroX = margins.left;
-        const recuadroY = currentY + 5;
+        let recuadroY = currentY + 5;
         const recuadroWidth = 190;
         let recuadroHeight = 30; // Inicializamos con un valor base
 
         doc.setFontSize(7);
         doc.setLineWidth(0.5);
 
+        // Condiciones de pago (como un solo párrafo)
+        const condiciones =
+          "PARA CONFIRMACIONES SE DEBE ENVIAR DEPOSITO DEL 50% DEL VALOR DEL PLAN Y EL SALDO 30 DIAS ANTES DE LA SALIDA, SI LA FECHA DE VIAJES CERCANA SE DEBE CANCELAR EL 100%. LOS SERVICIOS DEJADOS DE TOMAR NO SON REMBOLSABLES. LA CANCELACIÓN CON 18 DIAS ANTES DE VIAJE LA PENALIDAD SERA DEL 100% DEL VALOR DEL PLAN, LOS TIQUETES NO SON REEMBOLSABLE, NI ENDOSABLES, PENALIDAD POR CAMBIO (FECHA, NOMBRE, HORA, RUTAS) 200.000. ESTAS POLITICAS ESTAN PUBLICADAS DE MANERA CLARA Y ESPECIFICA EN NUESTRA PAGINA WWW.MULTIDESTINOSEXPRESS.COM. *TARIFAS SUJETA A CAMBIO Y DISPONIBILIDAD SIN PREVIO AVISO*";
+
+        // Dividir el párrafo en líneas que quepan en el recuadro
+        const splitLines = doc.splitTextToSize(condiciones, recuadroWidth - 10);
+
+        // Verificar si el recuadro cabe en la página actual
+        if (recuadroY + recuadroHeight > pageHeight - margins.bottom) {
+          doc.addPage();
+          currentY = margins.top; // Reiniciar currentY en la nueva página
+          recuadroY = currentY + 5;
+        }
         // Título del recuadro (sin cambios)
         doc.text(
           "Deposito y Condiciones de Pago",
@@ -2148,25 +2179,10 @@ export default {
         // Reducir tamaño de fuente y ajustar espaciado entre líneas
         doc.setFontSize(6);
         const lineHeightPago = 5; // Espacio entre líneas (nombre cambiado)
-
-        // Condiciones de pago (como un solo párrafo)
-        const condiciones =
-          "PARA CONFIRMACIONES SE DEBE ENVIAR DEPOSITO DEL 50% DEL VALOR DEL PLAN Y EL SALDO 30 DIAS ANTES DE LA SALIDA, SI LA FECHA DE VIAJES CERCANA SE DEBE CANCELAR EL 100%. LOS SERVICIOS DEJADOS DE TOMAR NO SON REMBOLSABLES. LA CANCELACIÓN CON 18 DIAS ANTES DE VIAJE LA PENALIDAD SERA DEL 100% DEL VALOR DEL PLAN, LOS TIQUETES NO SON REEMBOLSABLE, NI ENDOSABLES, PENALIDAD POR CAMBIO (FECHA, NOMBRE, HORA, RUTAS) 200.000. ESTAS POLITICAS ESTAN PUBLICADAS DE MANERA CLARA Y ESPECIFICA EN NUESTRA PAGINA WWW.MULTIDESTINOSEXPRESS.COM. *TARIFAS SUJETA A CAMBIO Y DISPONIBILIDAD SIN PREVIO AVISO*";
-
-        // Dividir el párrafo en líneas que quepan en el recuadro
-        const splitLines = doc.splitTextToSize(condiciones, recuadroWidth - 10);
-
         // Calcular la altura necesaria para el recuadro
         recuadroHeight = 20 + splitLines.length * lineHeightPago; // 20 para el título y margen superior
-
-        // Verificar si el recuadro cabe en la página actual
-        if (recuadroY + recuadroHeight > pageHeight - margins.bottom) {
-          doc.addPage();
-          currentY = margins.top; // Reiniciar currentY en la nueva página
-        }
-
         // Dibujar el recuadro
-        doc.rect(recuadroX, currentY, recuadroWidth, recuadroHeight);
+        doc.rect(recuadroX, recuadroY, recuadroWidth, recuadroHeight);
 
         // Escribir el texto dentro del recuadro
         splitLines.forEach((splitLine, splitIndex) => {
@@ -3776,7 +3792,7 @@ export default {
               const valorBrutoniño =
                 (this.childrenPriceNumber ? this.childrenPriceNumber : 0) *
                 numNiños;
-              const valorBrutoTotal = valorBrutoAdulto + valorBrutoniño;
+              let valorBrutoTotal = valorBrutoAdulto + valorBrutoniño;
               console.log("valorBrutoAdulto", valorBrutoAdulto);
               console.log("valorBrutoniño", valorBrutoniño);
               console.log("valorBrutoTotal", valorBrutoTotal);
@@ -3820,14 +3836,20 @@ export default {
               //IMPUESTOS CAÑO CRISTAL
 
               // Calcular impuestos
-              const impuestosHabitacion = {
-                cormacarena: 0,
-                pqsNaturales: 0,
-                alcaldia: 0,
+              let impuestosHabitacion = {
+                cormacarena5a11: 0,
+                cormacarena12a65: 0,
+                cormacarenaExtranjero: 0,
+                pqsNaturales5a24: 0,
+                pqsNaturales25a65: 0,
+                pqsNaturalesExtranjero: 0,
+                alcaldiaNacional: 0,
+                alcaldiaExtranjero: 0,
                 defensaCivil: 0,
               };
 
               console.log("Habitación actual:", room);
+
               // Verificar si hay edades para calcular impuestos
               if (room.adultAges.length > 0 || room.childAge) {
                 // Calcular impuestos para cada adulto
@@ -3844,59 +3866,70 @@ export default {
                   for (const impuesto of impuestosData) {
                     const nombreImpuesto = impuesto.IMPUESTO;
 
-                    // Lógica especial para PQS NATURALES
-                    if (nombreImpuesto === "PQS NATURALES") {
+                    console.log(`Impuesto actual: ${nombreImpuesto}`);
+
+                    if (nombreImpuesto === "cormacarena") {
                       if (esExtranjero) {
-                        const valorImpuesto =
+                        impuestosHabitacion.cormacarenaExtranjero +=
                           parseFloat(impuesto.EXTRANJERO) || 0;
-                        impuestosHabitacion[nombreImpuesto] += valorImpuesto;
                         console.log(
-                          `  Impuesto ${nombreImpuesto}: ${valorImpuesto} (EXTRANJERO)`
+                          `  Impuesto ${nombreImpuesto} (Extranjero): ${impuesto.EXTRANJERO} (acumulado)`
                         );
                       } else if (edadAdulto >= 5 && edadAdulto <= 11) {
-                        const valorImpuesto =
-                          parseFloat(impuesto["5 a 11 años"]) || 0;
-                        impuestosHabitacion[nombreImpuesto] += valorImpuesto;
+                        impuestosHabitacion.cormacarena5a11 +=
+                          parseFloat(impuesto["5 a 24 años"]) || 0;
                         console.log(
-                          `  Impuesto ${nombreImpuesto}: ${valorImpuesto} (5 a 11 años)`
+                          `  Impuesto ${nombreImpuesto} (5 a 11 años): ${impuesto["5 a 11 años"]} (acumulado)`
                         );
                       } else if (edadAdulto >= 12 && edadAdulto <= 65) {
-                        const valorImpuesto =
+                        impuestosHabitacion.cormacarena12a65 +=
                           parseFloat(impuesto["12 a 65 años"]) || 0;
-                        impuestosHabitacion[nombreImpuesto] += valorImpuesto;
                         console.log(
-                          `  Impuesto ${nombreImpuesto}: ${valorImpuesto} (12 a 65 años)`
+                          `  Impuesto ${nombreImpuesto} (12 a 65 años): ${impuesto["12 a 65 años"]} (acumulado)`
                         );
                       }
-                    } else {
-                      // Lógica para los demás impuestos (solo extranjero o 5 a 11 y 12 a 65)
+                    } else if (nombreImpuesto === "pqsNaturales") {
                       if (esExtranjero) {
-                        const valorImpuesto =
+                        impuestosHabitacion.pqsNaturalesExtranjero +=
                           parseFloat(impuesto.EXTRANJERO) || 0;
-                        impuestosHabitacion[nombreImpuesto] += valorImpuesto;
                         console.log(
-                          `  Impuesto ${nombreImpuesto}: ${valorImpuesto} (EXTRANJERO)`
+                          `  Impuesto ${nombreImpuesto} (Extranjero): ${impuesto.EXTRANJERO} (acumulado)`
                         );
-                      } else if (edadAdulto >= 5 && edadAdulto <= 11) {
-                        const valorImpuesto =
-                          parseFloat(impuesto["5 a 11 años"]) || 0;
-                        impuestosHabitacion[nombreImpuesto] += valorImpuesto;
+                      } else if (edadAdulto >= 5 && edadAdulto <= 24) {
+                        impuestosHabitacion.pqsNaturales5a24 +=
+                          parseFloat(impuesto["5 a 23 años"]) || 0;
                         console.log(
-                          `  Impuesto ${nombreImpuesto}: ${valorImpuesto} (5 a 11 años)`
+                          `  Impuesto ${nombreImpuesto} (5 a 24 años): ${impuesto["5 a 23 años"]} (acumulado)`
                         );
-                      } else if (edadAdulto >= 12 && edadAdulto <= 65) {
-                        const valorImpuesto =
-                          parseFloat(impuesto["12 a 65 años"]) || 0;
-                        impuestosHabitacion[nombreImpuesto] += valorImpuesto;
+                      } else if (edadAdulto >= 25 && edadAdulto <= 65) {
+                        impuestosHabitacion.pqsNaturales25a65 +=
+                          parseFloat(impuesto["25 a 65 años"]) || 0;
                         console.log(
-                          `  Impuesto ${nombreImpuesto}: ${valorImpuesto} (12 a 65 años)`
-                        );
-                      } else {
-                        // Si no se encuentra un rango de edad válido, se asume que no hay impuesto para esa persona
-                        console.log(
-                          `  Impuesto ${nombreImpuesto}: No aplica (edad fuera de rango)`
+                          `  Impuesto ${nombreImpuesto} (25 a 65 años): ${impuesto["25 a 65 años"]} (acumulado)`
                         );
                       }
+                    } else if (nombreImpuesto === "alcaldia") {
+                      if (esExtranjero) {
+                        impuestosHabitacion.alcaldiaExtranjero +=
+                          parseFloat(impuesto.EXTRANJERO) || 0;
+                        console.log(
+                          `  Impuesto ${nombreImpuesto} (Extranjero): ${impuesto.EXTRANJERO} (acumulado)`
+                        );
+                      } else if (edadAdulto >= 5 && edadAdulto <= 65) {
+                        // Solo para nacionales mayores de 12 años
+                        impuestosHabitacion.alcaldiaNacional +=
+                          parseFloat(impuesto["12 a 65 años"]) || 0;
+                        console.log(
+                          `  Impuesto ${nombreImpuesto} (Nacional): ${impuesto["12 a 65 años"]} (acumulado)`
+                        );
+                      }
+                    } else if (nombreImpuesto === "defensaCivil") {
+                      // Asumiendo que el impuesto de Defensa Civil se aplica a todos por igual
+                      impuestosHabitacion.defensaCivil +=
+                        parseFloat(impuesto["5 a 11 años"]) || 0;
+                      console.log(
+                        `  Impuesto ${nombreImpuesto}: ${impuesto["5 a 11 años"]} (acumulado)`
+                      );
                     }
                   }
                 }
@@ -3913,12 +3946,32 @@ export default {
 
                   for (const impuesto of impuestosData) {
                     const nombreImpuesto = impuesto.IMPUESTO;
-                    const valorImpuesto =
-                      parseFloat(impuesto["5 a 11 años"]) || 0;
-                    impuestosHabitacion[nombreImpuesto] += valorImpuesto;
-                    console.log(
-                      `  Impuesto ${nombreImpuesto}: ${valorImpuesto} (5 a 11 años)`
-                    );
+                    if (nombreImpuesto === "PQS NATURALES") {
+                      const valorImpuesto =
+                        parseFloat(impuesto["5 a 11 años"]) || 0;
+                      impuestosHabitacion.pqsNaturales5a24 += valorImpuesto;
+                      console.log(
+                        `  Impuesto ${nombreImpuesto} (5 a 24 años): ${valorImpuesto} (acumulado)`
+                      );
+                    } else if (
+                      nombreImpuesto === "ALCALDIA" ||
+                      nombreImpuesto === "CORMACARENA"
+                    ) {
+                      const valorImpuesto =
+                        parseFloat(impuesto["5 a 11 años"]) || 0;
+                      impuestosHabitacion[`${nombreImpuesto}5a11`] +=
+                        valorImpuesto;
+                      console.log(
+                        `  Impuesto ${nombreImpuesto} (5 a 11 años): ${valorImpuesto} (acumulado)`
+                      );
+                    } else if (nombreImpuesto === "DEFENSA CIVIL") {
+                      const valorImpuesto =
+                        parseFloat(impuesto["5 a 11 años"]) || 0;
+                      impuestosHabitacion.defensaCivil += valorImpuesto;
+                      console.log(
+                        `  Impuesto ${nombreImpuesto}: ${valorImpuesto} (acumulado)`
+                      );
+                    }
                   }
                 }
               }
@@ -3935,6 +3988,7 @@ export default {
                 impuestosHabitacion
               ); // Verificar impuestos calculados
 
+              //FIN IMPUESTOS CAÑO CRISTAL
               //suma
               let totalImpuestos = 0;
               for (const impuesto in impuestosHabitacion) {
@@ -3943,10 +3997,12 @@ export default {
 
               // Add to TotalAcomodacion
               TotalAcomodacion += totalImpuestos;
+              valorBrutoTotal += totalImpuestos;
               console.log(
                 "TOTALACOMODACION DESPUES DE IMPUESTOS ",
                 TotalAcomodacion
               );
+              console.log("TOTALBRUTO DESPUES DE IMPUESTOS ", valorBrutoTotal);
               this.habitacionesDatos.push({
                 idCotizacion: "",
                 adultos: numAdultos,
@@ -3989,10 +4045,22 @@ export default {
                   .join(","), // Unir en una cadena separada por comas
 
                 //impuestos:
-                cormacarena: impuestosHabitacion.cormacarena,
-                pqsNaturales: impuestosHabitacion.pqsNaturales,
-                alcaldia: impuestosHabitacion.alcaldia,
                 defensaCivil: impuestosHabitacion.defensaCivil,
+
+                //2
+                alcaldiaNacional: impuestosHabitacion.alcaldiaNacional,
+                alcaldiaExtranjero: impuestosHabitacion.alcaldiaExtranjero,
+
+                //3
+                pqsNaturalesExtranjero:
+                  impuestosHabitacion.pqsNaturalesExtranjero,
+                pqsNaturales25a65: impuestosHabitacion.pqsNaturales25a65,
+                pqsNaturales5a24: impuestosHabitacion.pqsNaturales5a24,
+                //3
+                cormacarenaExtranjero:
+                  impuestosHabitacion.cormacarenaExtranjero,
+                cormacarena5a11: impuestosHabitacion.cormacarena5a11,
+                cormacarena12a65: impuestosHabitacion.cormacarena12a65,
                 // Agrega otros valores que desees enviar
               });
             } else {
